@@ -12,6 +12,7 @@ import com.example.mindease.data.JournalDatabase
 import com.example.mindease.data.JournalViewModelFactory
 import com.example.mindease.repository.JournalRepository
 import com.example.mindease.ui.theme.*
+import com.example.mindease.viewmodel.ChatViewModel
 import com.example.mindease.viewmodel.JournalViewModel
 import com.example.mindease.viewmodel.LoginRegisterViewModel
 
@@ -52,8 +53,10 @@ class MainActivity : ComponentActivity() {
                             HomeScreen(navController)
                         }
                         composable("mood") {
-                            MoodTrackerScreen(moodViewModel = viewModel())
+                            val chatViewModel: ChatViewModel = viewModel()
+                            MoodTrackerScreen(viewModel = chatViewModel)
                         }
+
                         composable("breathing") {
                             BreathingScreen()
                         }
