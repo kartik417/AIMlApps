@@ -98,4 +98,5 @@ dependencies {
     implementation("androidx.compose.material:material:1.5.4") // Or match your Compose version
 
     implementation ("com.google.android.exoplayer:exoplayer:2.18.1")
+    implementation ("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
 }

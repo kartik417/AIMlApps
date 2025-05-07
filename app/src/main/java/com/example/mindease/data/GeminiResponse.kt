@@ -7,5 +7,3 @@ data class GeminiResponse(
 data class Candidate(
     val content: Content
 )
-
-

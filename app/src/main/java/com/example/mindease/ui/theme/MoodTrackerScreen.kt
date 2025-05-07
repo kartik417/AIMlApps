@@ -1,12 +1,9 @@
 package com.example.mindease.ui.theme
 
-import android.widget.Toast
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,37 +14,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.DismissDirection
-import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.FractionalThreshold
-import androidx.compose.material.SwipeToDismiss
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.rememberDismissState
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.drawscope.Stroke
-
-import com.example.mindease.data.MoodEntry
-import com.example.mindease.viewmodel.MoodViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-
-import androidx.compose.ui.graphics.Path
-
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.mindease.viewmodel.ChatViewModel
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun MoodTrackerScreen(
-    viewModel: ChatViewModel = viewModel()  // Add this
+    viewModel: ChatViewModel = viewModel()
 ) {
     var userMessage by remember { mutableStateOf("") }
     val messages by viewModel.messages.collectAsState()
@@ -55,16 +29,28 @@ fun MoodTrackerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.Top,
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(16.dp),
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
             text = "How are you feeling today?",
             style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.padding(bottom = 8.dp)
         )
+
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(messages) { message ->
+                ChatMessageItem(message = message)
+            }
+
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = userMessage,
@@ -73,32 +59,52 @@ fun MoodTrackerScreen(
             placeholder = { Text("Type anything you want to share...") },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp),
-            maxLines = 6,
+                .height(120.dp),
+            maxLines = 5,
             shape = RoundedCornerShape(12.dp)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Button(
             onClick = {
                 if (userMessage.isNotBlank()) {
-                    viewModel.sendMessage(userMessage) // Call Gemini API here
+                    viewModel.sendMessage(userMessage)
                     userMessage = ""
                 }
             },
-            shape = RoundedCornerShape(12.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(50.dp)
+                .height(48.dp),
+            shape = RoundedCornerShape(12.dp)
         ) {
             Text("Submit")
         }
+    }
+}
 
-        // Show AI response(s)
-        Spacer(modifier = Modifier.height(24.dp))
-        messages.forEach { message ->
-            MessageItem(message = message)
+@Composable
+fun ChatMessageItem(message: String) {
+    val isUser = message.startsWith("You:")
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(4.dp),
+        contentAlignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
+    ) {
+        Surface(
+            color = if (isUser) Color(0xFFDCF8C6) else Color(0xFFEDEDED),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.widthIn(max = 280.dp)
+        ) {
+            Text(
+                text = message.removePrefix("You:").removePrefix("Bot:").trim(),
+                modifier = Modifier.padding(12.dp),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black
+            )
         }
     }
 }
@@ -107,7 +113,6 @@ fun MoodTrackerScreen(
 @Composable
 fun PreviewMoodTrackerScreen() {
     MindEaseTheme {
-        // Use a mock or real ViewModel instance
         MoodTrackerScreen(viewModel = ChatViewModel())
     }
 }

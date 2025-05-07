@@ -1,5 +1,6 @@
 package com.example.mindease.ui.theme
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.foundation.background
@@ -24,8 +25,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
-import kotlinx.coroutines.delay
 
+import kotlinx.coroutines.delay
 
 
 
@@ -35,7 +36,20 @@ fun HomeScreen(navController: NavHostController) {
         colors = listOf(Color(0xFF1E88E5), Color(0xFF42A5F5))
     )
 
-    val quoteOfTheDay = "“The only way to do great work is to love what you do.” – Steve Jobs"
+    var quote by remember { mutableStateOf("Loading quote...") }
+    var author by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        try {
+            val response = RetrofitInstance.api.getRandomQuote()
+            quote = "“${response.content}”"
+            author = "– ${response.author}"
+        } catch (e: Exception) {
+            quote = "Failed to load quote"
+            author = ""
+            Log.e("HomeScreen", "Error fetching quote: ${e.message}", e)
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -52,7 +66,6 @@ fun HomeScreen(navController: NavHostController) {
             item { TopBar() }
 
             item {
-                // Welcome Text with animation
                 ScrollAnimatedItem(index = 0) {
                     Text(
                         text = "Welcome to MindEase 👋",
@@ -72,7 +85,6 @@ fun HomeScreen(navController: NavHostController) {
                 Feature(Icons.Filled.Chat, "AI Therapist", "Chat with an AI-powered therapist anytime.", "chat")
             )
 
-            // LazyColumn with animated items
             itemsIndexed(features) { index, feature ->
                 ScrollAnimatedItem(index = index + 1) {
                     FeatureCard(
@@ -85,6 +97,7 @@ fun HomeScreen(navController: NavHostController) {
                 }
             }
 
+            // 💬 Quote of the Day from API
             item {
                 ScrollAnimatedItem(index = features.size + 1) {
                     Column(
@@ -105,7 +118,7 @@ fun HomeScreen(navController: NavHostController) {
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         Text(
-                            quoteOfTheDay,
+                            quote,
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 color = Color.White,
                                 fontStyle = FontStyle.Italic,
@@ -113,6 +126,18 @@ fun HomeScreen(navController: NavHostController) {
                             ),
                             textAlign = TextAlign.Center
                         )
+                        if (author.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                author,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    fontStyle = FontStyle.Italic
+                                ),
+                                textAlign = TextAlign.End,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
                     }
                 }
             }
@@ -135,7 +160,6 @@ fun HomeScreen(navController: NavHostController) {
                 "Positive Affirmations" to "Boost confidence with daily affirmations"
             )
 
-            // Articles with smooth transition
             itemsIndexed(articles) { index, (title, summary) ->
                 ScrollAnimatedItem(index = features.size + index + 2) {
                     ArticleCard(title = title, summary = summary) {
@@ -146,6 +170,7 @@ fun HomeScreen(navController: NavHostController) {
         }
     }
 }
+
 
 // Animated scroll for each item
 @Composable

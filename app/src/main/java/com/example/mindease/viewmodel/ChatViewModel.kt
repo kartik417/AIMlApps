@@ -3,10 +3,9 @@ package com.example.mindease.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.mindease.*
+import com.example.mindease.GeminiApiService
 import com.example.mindease.data.Content
 import com.example.mindease.data.GeminiRequest
-import com.example.mindease.data.GeminiResponse
 import com.example.mindease.data.Part
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,69 +14,65 @@ import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
+import java.io.IOException
 
 class ChatViewModel : ViewModel() {
 
     private val _messages = MutableStateFlow<List<String>>(emptyList())
-    val messages: StateFlow<List<String>> = _messages
+    val messages: StateFlow<List<String>> get() = _messages
 
     private val apiKey = "AIzaSyBrWWu8DTlEDiVhEj2W3SOXndD8EVesKjQ"
 
-    // Optional: Logging for debugging
-    private val loggingInterceptor = HttpLoggingInterceptor().apply {
-        level = HttpLoggingInterceptor.Level.BODY
+    private val geminiService: GeminiApiService by lazy {
+        val loggingInterceptor = HttpLoggingInterceptor().apply {
+            level = HttpLoggingInterceptor.Level.BODY
+        }
+
+        val client = OkHttpClient.Builder()
+            .addInterceptor(loggingInterceptor)
+            .build()
+
+        val retrofit = Retrofit.Builder()
+            .baseUrl("https://generativelanguage.googleapis.com/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .client(client)
+            .build()
+
+        retrofit.create(GeminiApiService::class.java)
     }
 
-    private val client = OkHttpClient.Builder()
-        .addInterceptor(loggingInterceptor)
-        .build()
-
-    private val retrofit = Retrofit.Builder()
-        .baseUrl("https://generativelanguage.googleapis.com/")
-        .addConverterFactory(GsonConverterFactory.create())
-        .client(client)
-        .build()
-
-    private val geminiService = retrofit.create(GeminiApiService::class.java)
-
     fun sendMessage(userMessage: String) {
-        val currentMessages = _messages.value.toMutableList()
-        currentMessages.add("You: $userMessage")
-        _messages.value = currentMessages
+        appendMessage("You: $userMessage")
 
         val request = GeminiRequest(
             contents = listOf(
-                Content(
-                    parts = listOf(
-                        Part(text = userMessage)
-                    )
-                )
+                Content(parts = listOf(Part(text = userMessage)))
             )
         )
 
-        geminiService.generateContent(apiKey, request)
-            .enqueue(object : Callback<GeminiResponse> {
-                override fun onResponse(call: Call<GeminiResponse>, response: Response<GeminiResponse>) {
-                    if (response.isSuccessful) {
-                        val reply = response.body()?.candidates?.firstOrNull()?.content?.parts?.firstOrNull()?.text
-                        if (!reply.isNullOrEmpty()) {
-                            val updatedMessages = _messages.value.toMutableList()
-                            updatedMessages.add("Bot: $reply")
-                            _messages.value = updatedMessages
-                        } else {
-                            Log.e("ChatViewModel", "Empty reply from Gemini")
-                        }
-                    } else {
-                        Log.e("ChatViewModel", "Gemini API error: ${response.code()} ${response.message()}")
-                    }
+        viewModelScope.launch {
+            try {
+                val response = geminiService.generateContent(apiKey, request)
+                val reply = response.candidates.firstOrNull()?.content?.parts?.firstOrNull()?.text
+
+                if (!reply.isNullOrBlank()) {
+                    appendMessage("Bot: $reply")
+                } else {
+                    Log.e("ChatViewModel", "Empty response from Gemini API.")
+                    appendMessage("Bot: Sorry, I didn't understand that.")
                 }
 
-                override fun onFailure(call: Call<GeminiResponse>, t: Throwable) {
-                    Log.e("ChatViewModel", "Gemini API call failed", t)
-                }
-            })
+            } catch (e: IOException) {
+                Log.e("ChatViewModel", "Network error: ${e.localizedMessage}", e)
+                appendMessage("Bot: Network error. Please check your connection.")
+            } catch (e: Exception) {
+                Log.e("ChatViewModel", "Unexpected error: ${e.localizedMessage}", e)
+                appendMessage("Bot: Something went wrong. Please try again later.")
+            }
+        }
+    }
+
+    private fun appendMessage(message: String) {
+        _messages.value = _messages.value + message
     }
 }
